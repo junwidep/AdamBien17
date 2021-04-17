@@ -1,0 +1,282 @@
+W tym pliku rozwiązywane są ćwiczenia zamieszczone w pierwszym rozdziale książki H. Wickhama i G. Grolemunda pt. "Język R; kompletny zestaw narzrędzi dla analityków danych"
+
+Ćwiczenia ze strony 26
+```{r}
+#1. Uruchom polecenie ggplot(data = mpg). Co widzisz?
+library(tidyverse)
+ggplot(data = mpg)
+#AD1. funkcja ggplot z pakiety ggplot2 generuje układ współrzędnych, na którym można dodawać następnie warstwy. 
+
+#2. Ile wierszy znajduje się w zbiorze danych mtcars? Ile jest kolumn
+dim(mtcars)
+#AD2. W zbiorze danych mtcars znajdują się 32 wiersze i 11 kolumn.
+
+#3. Co opisuje zmienna drv? Dowiesz się tego z treści pomocy, która zostanie wyświetlona po uruchomieniu polecenia ?mpg.
+?mpg
+typeof(mpg$drv)
+#AD3. Zmienna drv opisuje rodzaj napędu danego modelu samochodu. Przyjmuje 3 wartości zmiennych typu character: f, r i 4, gdzie:
+#f - oznacza napęd przedniej osi
+#r - oznacza napęd tylnej osi
+#4 - oznacza napęd na obie osi.
+
+#4. Wykonaj wykres punktowy zależności między zmiennymi hwy i cyl.
+ggplot(data = mpg, aes(x = cyl, y = hwy)) +
+  geom_point(position = "jitter")
+
+#5. Co zobaczysz na wykresie punktowym zależności między zmiennymi class i drv? Dlaczego ten wykres jest bezużyteczny?
+ggplot(data = mpg, aes(x = class, y = drv)) + 
+  geom_point()
+#AD5. Punkty na wykresie reprezentują modele samochodów danej klasy o konkretnym napędzie. Wykres jest nieczytelny, ponieważ punkty nachodzą na siebie. Dodanie parametru <position = "jitter"> funkcji <geom_point()> doda losowy szum, który uwydatni skupiska, lecz wykres punktowy nie jest najlepszym wyborem.
+```
+
+Ćwiczenia ze strony 30
+```{r}
+#1. W którym miejscu tego kodu znajduje się błąd? Dlaczego punkty nie są niebieskie?
+ggplot(data = mpg) + 
+  geom_point(mapping = aes(x = displ, y = hwy, color = "blue"))
+
+ggplot(data = mpg) + 
+  geom_point(mapping = aes(x = displ, y = hwy, color = drv))
+
+ggplot(data = mpg) + 
+  geom_point(mapping = aes(x = displ, y = hwy), color = "blue")
+#AD1. Parametr "color" dodany w funkcji <aes()> wskazuje, by punkty zostały pokolorowane według przekazanej wartości. Jeśli jest to zmienna, to punkty pokolorowane będą według wartości jaka ta zmienna przyjmuje. Jeśli chcemy, by punkty były koloru niebieskiego (bądź jakiegokolwiek innego), parametr "blue" należy przekazać poza funkcją <aes()>.
+
+#2. Które zmienne ze zbioru mpg są kategorialne? Które zmienne są ciągłe? (Wskazówka: wpisz ?mpg, by przeczytać dokumentację tego zbioru danych). Jak sprawdzić te informacje, uruchamiając polecenie mpg?
+lapply(mpg, typeof)
+#AD2. Typy zmiennych w zbiorze to:
+#character: manufacturer, model, trans, drv, fl, class
+#integer: year, cyl, cty, hwy
+#double: displ
+
+#3. Zmapuj zmienną ciągłą na estetykę color, size i shape. Na czym polega różnica w zachowaniu tych estetyk w przypadku zmiennych kategorialnych i ciągłych?
+ggplot(data = mpg, aes(x = hwy, y = displ, color = displ)) + 
+  geom_point()
+
+ggplot(data = mpg, aes(x = hwy, y = displ, size = displ)) + 
+  geom_point()
+
+ggplot(data = mpg, aes(x = hwy, y = displ, shape = displ)) + 
+  geom_point()
+#AD3. W przypadku parametru "color" następuje zmiana natężenia (odcienia) koloru wraz ze zmianą wartości zmiennej ciągłej. Podobnie w przypadku parametru "size", punkt rośnie wraz ze wzorstem wartości zmiennej ciągłej. Parametr "shape" zwraca błąd. 
+
+#4. Co się stanie, jeśli zmapujesz tę samą zmienną na wiele estetyk? 
+ggplot(data = mpg, aes(x = hwy, y = displ, color= displ, size = displ)) +
+  geom_point()
+#AD4. Efekty nakładają się na siebie.
+
+#5. Do czego służy estetyka "stroke"? Z jakimi kształtami można jej użyć? (Wskazówka: skorzystaj z polecenia ?geom_point).
+ggplot(data = mpg, aes(x = hwy, y = displ)) +
+  geom_point(size = 6, stroke = 3, shape = 0)
+#AD5. Dla kształtów punktów z obramowaniem parametr stroke określa grubość obramowania
+
+#6. Co się stanie, jeśli zmapujesz estetykę na coś innego niż nazwa zmiennej, jak na przykład aes(color = displ <5)?
+ggplot(data = mpg, aes(x = hwy, y = displ, color = displ < 5)) +
+  geom_point()
+#AD6. Kolory dobierane są do punktów na podstawie testu logicznego. Inne kolory przyjmują punkty niespełniające zapytania, niż te, które zapytanie spełniaja.
+```
+
+Ćwiczenia ze strony 34
+```{r}
+#1. Co się stanie, jeśli podzielisz wykres na panele na podstawie zmiennej ciągłej?
+ggplot(data = mpg, aes(x = class, y = hwy)) + 
+  geom_point() +
+  facet_wrap(~displ)
+#AD1. Powstanie tyle paneli, ile jest unikalnych wartości przyjmowanych przez zmienną ciągłą.
+
+#2. Co oznaczają puste komórki na wykresie utworzonym przy użyciu instrukcji <facet_grid(drv ~ cyl)>? Jaka jest ich zależność względem tego wykresu?
+ggplot(data = mpg, aes(x = drv, y = cyl)) +
+  geom_point() +
+  facet_grid(drv ~ cyl)
+#AD2. funkcja <facet_grid()> tworzy tyle paneli, ile jest kombinacji przekazanych dwóch zmiennych. To oznacza, że funkcja wytworzy panel nawet dla kombinacji wartości zmiennych, dla których nie należy żadna z obserwacji.
+
+#3. Jakie wykresy powstaną po uruchomieniu tego kodu? Do czego służy znak <.>?
+ggplot(data = mpg, aes(x = displ, y = hwy)) +
+  geom_point() +
+  facet_grid(drv ~ .)
+
+ggplot(data = mpg, aes(x = displ, y = hwy)) +
+  geom_point() +
+  facet_grid(. ~ cyl)
+
+ggplot(data = mpg, aes(x = displ, y = hwy)) +
+  geom_point() +
+  facet_wrap(~ cyl, nrow = 1)
+#AD3. Kropka przekazana do funkcji <facet_grid()> oznacza, że panele nie będą tworzone na wierszach (lewa strona rówania) bądź kolumnach (prawa strona równania).
+
+#4. Przyjrzyj się wykresowi w pierwszym panelu utworzonym za pomocą poniższego kodu. Jakie korzyści płyną z użycia paneli w porównaniu z użyciem estetyki koloru? Jakie są wady tego podejścia? Jak się to zmieni, jeśli skorzystasz z wielkiego zbioru danych?
+ggplot(data = mpg, aes(x = displ, y = hwy)) +
+  geom_point() +
+  facet_wrap(~ class, nrow = 2)
+
+ggplot(data = mpg, aes(x = displ, y = hwy, color = class)) +
+  geom_point()
+#AD4. Korzystając z paneli można prościej porównać pewną zależność pod względem przyjmowanej zmiennej kategorialnej. Jeśli zmienna kategorialna przyjmuje dużo wartości, powstanie dużo paneli przez co porównywanie ich będzie trudniejsze.
+
+#5. Przeczytaj pomoc dla ?facet_wrap. Do czego służy argument nrow? Do czego służy argument ncol? Jakie inne opcje kontrolują układ poszczególnych paneli? dlaczego funkcja <facet_grid()> nie przyjmuje argumentów nrow i ncol?
+#AD5. Funkcja <facet_wrap()>, w odróżnieniu od funkcji <facet_grid()>, tworzy panele na podstawie jednej zmiennej, przez co każdy panel jest wypełniony. Argumenty funkcji nrow i ncol można ustawić, aby zadecydować o ułożeniu paneli (w ilu wierszach i w ilu kolumnach). Funkcja <facet_grid()> nie przyjmuje takich argumentrów, ponieważ tworzy ona panele dla wszystkich kombinacji dwóch zmiennych, nawet dla takich, dla których nie należy żadna obserwacja.
+
+#6. Podczas korzystania z funkcji <facet_grid()> w kolumnach zwykle należy umieszczać zmienne z bardziej unikatowymi poziomami. Dlaczego?
+ggplot(data = mpg, aes(x = displ, y = hwy)) +
+  geom_point() +
+  facet_grid(cyl ~ class)
+#AD6. Można w ten sposób łatwiej porównać obserwacje przyjmujące różne poziomy zmiennej przekazanej w kolumnach, które przyjmują podobne wartości w zmiennej przekazanej na wiersze.
+```
+
+Ćwiczenia ze strony 40
+```{r}
+#1. Jakiej geometrii użyjesz, aby narysować wykres liniowy? Wykres pudełkowy? Histogram? Wykres warstwowy?
+#AD1. <geom_line()>, <geom_boxplot()>, <geom_histogram()>, <geom_area()>
+
+#2. Wyobraź sobie wynik działania poniższego kodu. Następnie uruchom go w R i zweryfikuj swoje przewidywania:
+ggplot(data = mpg, aes(x = displ, y = hwy, color = drv)) +
+  geom_point() +
+  geom_smooth(se = FALSE)
+
+#3. Do czego służy kod <show.legend = FALSE>? Co się stanie, gdy go usuniesz? Jak myślisz, dlaczego użyłem go wcześniej w tym rozdziale?
+ggplot(data = mpg, aes(x = displ, y = hwy, color = drv)) +
+  geom_smooth(show.legend = FALSE)
+#AD3. kod ten ukrywa legendę z boku wykresu. Po usunięciu go przyjmie wartość domyślną, czyli TRUE (czyli na wykresie będzie widoczna legenda). Nie mam pojęcia, czemu została ona usunięta w tym przykładzie. Wykres jest nieczytelny, ponieważ przedstawia trzy krzywe w zależności od przyjmowanej wartości zmiennej kategorialnej, ale bez legendy nie wiadomo która krzywa przedstawia który poziom (Nie wiadomo nawet jaka to zmienna).
+
+#4. Do czego służy argument se w funkcji <geom_smooth()>? 
+#AD4. Do rysowania zacieniowanej przestrzeni wokół krzywej, oznaczającej przedział ufności.
+
+#5. Czy te dwa wykresy są inne? Dlaczego?
+ggplot(data = mpg, aes(x = displ, y = hwy)) +
+  geom_point() +
+  geom_smooth()
+
+ggplot() +
+  geom_point(data = mpg, aes(x  = displ, y = hwy)) +
+  geom_smooth(data = mpg, aes(x = displ, y = hwy))
+#AD5. Nie, te wykresy są identyczne. Różnica jest w sposobie przekazania danych. W pierwszym przykładzie dane przekazywane są globalnie, w drugim lokalnie. Lokalne mapowania służą do rozszerzania bądź przesłaniania mapowania globalnego tylko w jednej, konkretnej warstwie. W powyższym przykładzie powinno stosować się sposób pierwszy, aby uniknąć redundancji kodu.
+
+#6. Odtwórz kod R potrzebny do wygenerowania następujących wykresów.
+ggplot(data = mpg, aes(x = displ, y = hwy)) +
+  geom_point() +
+  geom_smooth(se = FALSE)
+
+ggplot(data = mpg, aes(x = displ, y = hwy, group = drv)) +
+  geom_point() +
+  geom_smooth(se = FALSE)
+
+ggplot(data = mpg, aes(x = displ, y = hwy, color = drv)) +
+  geom_point() +
+  geom_smooth(se = FALSE)
+
+ggplot(data = mpg, aes(x = displ, y = hwy)) +
+  geom_point(aes(color = drv)) +
+  geom_smooth(se = FALSE)
+
+ggplot(data = mpg, aes(x = displ, y = hwy, linetype = drv)) +
+  geom_point(aes(color = drv)) +
+  geom_smooth(se = FALSE)
+
+ggplot(data = mpg, aes(x = displ, y = hwy)) +
+  geom_point(aes(fill = drv), pch = 21, color = "white", stroke = 2) +
+  geom_smooth(se = FALSE)
+```
+
+Ćwiczenia ze strony 45
+```{r}
+#1. Która domyślna funkcja geometryczna jest związana z funkcją <stat_summary()>? Jak można przepisać wcześniejszy wykres, aby skorzystać z funkcji geometrycznej zamiast z przekształcenia statystycznego?
+?stat_summary
+
+ggplot(data = diamonds, aes(x = cut, y = depth)) +
+  stat_summary(fun.ymin = min,
+               fun.ymax = max,
+               fun.y = median)
+
+ggplot(data = diamonds, aes(x = cut, y = depth)) +
+  geom_pointrange(fun.ymin = min,
+                  fun.ymax = max,
+                  fun.y = median,
+                  stat = "summary"
+                  )
+#AD1. funkcją geometryczną związaną z funkcją <stat_summary()> jest funkcja <geom_pointrange()>.
+
+#2. Do czego służyc funkcja <geom_col()>? Czym różni się od funkcji <geom_bar()>?
+#AD2. funkcja <geom_bar()> wykorzystuje domyślnie przekształcenie <stat_count()>, dlatego nie przyjmuje agrumentu "y". Wysokość słupka odpowiada ilości wystąpień danego zjawiska. Funkcja <geom_col()> związana jest z przekształceniem <stat_identity()>, które nie przekształca danych. Wysokość słupka będzie równa wartości przekazanego argumentu "y".
+
+#3. Większość funkcji geometrycznych i przekształceń statystycznych tworzy pare, które niemal zawsze są używane wspólnie. Przeczytaj dokumentację i wykonaj listę tych par. Co mają ze sobą wspólnego?
+#AD3. Nie mogłem znaleźć
+
+#4. Jakie zmienne oblicza funkcja <stat_smooth()>? Jakie parametry sterują jej zachowaniem?
+?stat_smooth
+#AD4. Funkcja <stat_smooth()> wylicza przewidywane wartości y na podstawie każdego z wartości x. Dodatkowo wyznacza przedział ufności i zaznacza go na wykresie szarym obszarem wokół krzywej.
+
+#5. Na naszym wykresie słupkowym proporcji musieliśmy skorzystać z zapisu "group = 1". Dlaczego? Innymi słowy, na czym polega problem z poniższymi wykresami?
+ggplot(data = diamonds, aes(x = cut, y = ..prop..)) +
+  geom_bar()
+
+ggplot(data = diamonds, aes(x = cut, y = ..prop.., fill = color)) +
+  geom_bar()
+
+ggplot(data = diamonds, aes(x = cut, y = ..prop.., group = 1)) +
+  geom_bar()
+#AD5. Wpisując argument "group = 1" wszystkie poziomy zmiennej "cut" zostaną zaklasyfikowane jako jedna i ta sama grupa, przez co wyznaczanie proporcji ma sens. Bez tego argumentu, każdy poziom tworzy swoją własną grupę, a proporcja z całości zawsze będzie równa jedności. 
+```
+
+Ćwiczenia ze strony 49
+```{r}
+#1. Na czym polega problem z tym wykresem? Jak można go poprawić?
+ggplot(data = mpg, aes(x = cty, y = hwy)) +
+  geom_point()
+
+ggplot(data = mpg, aes(x = cty, y = hwy)) +
+  geom_point(position = "jitter")
+#AD1. Punkty na pierwszym wykresie nachodzą na siebie. Powinno się dodać argument "position = "jitter""
+
+#2. Jakie parametry funkcji <geom_jitter()> sterują poziomem fluktuacji?
+ggplot(data = mpg, aes( x = cty, y = hwy)) + 
+  geom_jitter()
+
+ggplot(data = mpg, aes( x = cty, y = hwy)) + 
+  geom_jitter(width = .9, height = .9)
+#AD2. Poziomem fluktuacji w funkcji <geom_jitter()> sterują parametry width i height, które decydują o horyzontalnej i wertykalnej fluktuacji.
+
+#3. Porównaj ze sobą funkcje <geom_jitter()> i <geom_count()>.
+ggplot(data = mpg, aes( x = cty, y = hwy)) + 
+  geom_jitter()
+
+ggplot(data = mpg, aes( x = cty, y = hwy)) + 
+  geom_count()
+#AD3. Inny sposób z radzeniem sobie z problemem wynikającym z nakładających się na siebie punktów na wykresie. W przeciwieństwie do funkcji <geom_jitter()>, która nakłada losowy szum na punkty, ta nie przesuwa punktów, lecz zwiększa wielkość tych, które się nakładają jeden na drugi. 
+
+#4. Jakie jest domyślne dopasowanie położenia dla <geom_boxplot()>? Utwórz odpowiednią wizualizację zestawu danych "mpg".
+?geom_boxplot()
+ggplot(data = mpg, aes(x = class, y = displ, color = drv)) +
+  geom_boxplot()
+#AD4. Domyślnym dopasowaniem położenia dla funkcji <geom_boxplot()> jest pozycja "dodge", która sprawia, że nakładające się obiekty umieszczane są obok siebie. 
+```
+
+Ćwiczenia ze strony 51
+```{r}
+#1. Przekształć skumulowany wykres słupkowy w wykres kołowy za pomocą funkcji <coord_polar()>.
+ggplot(data = diamonds, aes(x = cut, fill = clarity)) +
+  geom_bar() +
+  coord_polar()
+
+#2. Do czego służy funkcja <labs()>? Przeczytaj dokumentację.
+?labs()
+#AD2. Funkcja <labs()> służy do ustawiania etykiet.
+
+#3. Na czym polega różnica między <coord_quickmap()>, a <coord_map()>?
+new_zealand <- map_data("nz")
+
+ggplot(new_zealand, aes(x = long, y = lat, group = group)) +
+  geom_polygon(fill = "white", color = "black") +
+  coord_map()
+
+ggplot(new_zealand, aes(x = long, y = lat, group = group)) +
+  geom_polygon(fill = "white", color = "black") +
+  coord_quickmap()
+#AD3. Funkcja <coord_map()> to projekcja sferyczna Ziemi na płaszczyznę 2D, na której nie zostawiane są proste linie, w wyniku czego jest to funkcja intensywna obliczeniowo. Funkcja <coord_quickmap()> zachowuje proste linie, przez co działa sprawniej, ale jest mniej precyzyjna. Lepiej używać tej funkcji dla niewielkich przestrzeni, najlepiej blisko równika. 
+
+#4. Patrząc na poniższy wykres, czego możesz się dowiedzieć o zależności między miastem (cty) a wydajnością zużycia paliwa na autostradzie (hwy)? Dlaczego ważne jest wywołanie <coord_fixed()>? Do czego służy funkcja <geom_abline()>?
+ggplot(data = mpg, aes(x = cty, y = hwy)) +
+  geom_point() +
+  geom_abline() +
+  coord_fixed()
+#AD4. Zauważyć można pozytywną korelację między dwiema zmiennymi. Funkcja <geom_abline()> dodaje linię reprezentującą nachylenie, zaś funkcja <coord_fixed()> sprawia, że zmiana zmiennej o jednostkę na obu osiach skutkuje przesunięciem o taką samą ustaloną proporcję odległości. 
+```

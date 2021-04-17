@@ -1,0 +1,22 @@
+W tym pliku rozwiązywane są ćwiczenia zamieszczone w drugim rozdziale książki H. Wickhama i G. Grolemunda pt. "Język R; kompletny zestaw narzrędzi dla analityków danych"
+
+Ćwiczenia ze strony 58
+```{r}
+#1. Dlaczego poniższy kod nie działa? Przyjrzyj się dokładnie! (Możesz odnieść wrażenie, że jest to wyjątkowo bezsensowne ćwiczenie, jednak warto trenować móżg w dostrzeganiu nawet najdrobniejszych różnic, co z pewnością przyniesie korzyści podczas programowania).
+my_variable <- 10
+my_varıable
+#AD1. litera "i" w wywołaniu obiektu, to tak naprawdę nie litera "i". R zwraca błąd, bo nazwy nie są identyczne. 
+
+#2. Popraw wszystkie poniższe polecenia R, aby można je było poprawnie uruchomić:
+library(tidyverse)
+
+ggplot(data = mpg, aes(x = displ, y  = hwy)) +
+  geom_point()
+
+filter(mpg, cyl == 8)
+
+filter(diamonds, carat > 3)
+
+#3. Naciśnij Alt+Shift+K. Co się stanie? Jak uzyskać taki sam efekt za pomocą menu?
+#AD3. Wyświetla różne przydatne skróty klawiszowe. Ścieżka przez menu: Tool -> Keyboard Shortcuts Help
+```
