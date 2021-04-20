@@ -1,0 +1,424 @@
+W tym pliku rozwiązywane są ćwiczenia zamieszczone w trzecim rozdziale książki H. Wickhama i G. Grolemunda pt. "Język R; kompletny zestaw narzrędzi dla analityków danych"
+
+Ćwiczenia ze strony 64
+```{r}
+#1. Znajdź wszystkei loty, które:
+#Były opóźnione podczas przylotu co najmiej o dwie godziny
+library(tidyverse)
+library(nycflights13)
+filter(flights, arr_delay >= 120)
+
+#Leciały do Houston
+filter(flights, dest %in% c("IAH", "HOU"))
+
+#Były obsługiwane przez linie United, American lub Delta
+filter(flights, carrier %in% c("AA", "DL", "UA"))
+
+#Odlatywały latem (w lipcu, sierpniu, wrześniu)
+filter(flights, month %in% c(7:9)) 
+
+#Przyleciały z ponad dwugodzinnym opóźnieniem, ale nie odleciały opóźnione
+filter(flights, arr_delay >= 120, dep_delay <= 0)
+
+#Były opóźnione o co najmniej godzinę, ale zrekompensowały opóźnienie o ponad 30 minut podczas lotu
+filter(flights, dep_delay >= 60, (dep_delay - arr_delay) <= 30)
+
+#Wyruszyły między północą a szóstą rano (włącznie)
+filter(flights, dep_time %in% c(2400, 0001:600))
+
+#2. Inną przydatną funkcją ilustrującą dostępną w pakiecie dplyr jest <between()>. Do czego ona służy? Czy możesz za jej pomocą uprościć kod potrzebny do uzyskania odpowiedzi na wcześniejsze pytania?
+filter(flights, !between(dep_time, 601, 2359))
+
+#3. Dla ilu lotów brakuje wartości zmiennej dep_time? Jakich innych zmiennych brakuje? Czego mogą dotyczyć te wiersze?
+sum(is.na(flights$dep_time))
+
+map_dbl(flights, ~ sum(is.na(.x)))
+sapply(flights, function(x) sum(is.na(x)))
+summarise_all(flights, funs(sum(is.na(.))))
+
+#4. Dlaczego NA^0 nie jest wartością brakującą? Dlaczego NA | TRUE nie jest wartością brakującą? Dlaczego FALSE & NA nie jest wartością brakującą? Czy możesz sformułować ogólną zasadę? (Podchwytliwym antyprzedziałem jest NA*0!)
+NA^0            #cokolwiek podniesione do potęgi zerowej daje wartość 1 (tutaj się trochę nie zgadzam)
+NA | TRUE       #niezależnie od wartości jaką przyjmuje NA, jedna z nich jest TRUE, stąd wynik
+FALSE & NA      #niezależnie od wartości jaką przyjmuje NA, jedna z nich jest FALSE, stąd wynik
+NA*0            #rezultatem jest NA, ponieważ nie wiemy, czy oryginalne NA jest liczbą skończoną, czy nieskończoną. Liczba skończona przemnożona przez zero da wynik zero, lecz nieskończona nie.
+
+#AD4. Są pewne testy logiczne, na które można dać odpowiedź nie znajac wszystkich składowych wyrażenia. W takim wypadku NA czasami jest nieistotne, aby podać odpowiedź.
+```
+
+Ćwiczenia ze strony 66
+```{r}
+#1. Jak za pomocą funkcji <arrange()> posortować wszystkie brakujące wartości, tak aby znalazły się na początku? (Wskazówka: użyj funkcji <is.na()>)
+df <- tibble(x = c(5, 3, 5, NA, NA, 1, NA))
+arrange(df, desc(is.na(x)))
+
+#2. Posortuj dane flights, aby znaleźć najbardziej opóźnione loty. Znajdź te, które odleciały najwcześniej.
+arrange(flights, desc(dep_delay))
+arrange(flights, dep_time)
+
+#3. Posortuj dane flights, aby znaleźć najszybsze loty
+arrange(flights, air_time)
+
+#4. Które loty trwały najdłużej? Które najdłużej?
+arrange(flights, air_time)
+arrange(flights, desc(air_time))
+```
+
+Ćwiczenia ze strony 68
+```{r}
+#1. Wymyśl jak najwięcej sposobów na wybraie wartości zmiennych dep_time, dep_delay, arr_time i arr_delay ze zbioru danych flights.
+select(flights, dep_time, dep_delay, arr_time, arr_delay)
+select(flights, starts_with("dep"), starts_with("arr"))
+select(flights, ends_with("time"), ends_with("delay"), -starts_with("sched"))
+select(flights, matches("^dep|^arr"))
+select(flights, matches("time$|delay"), -matches("^air|^sched"))
+select(flights, contains("dep"), contains("arr"), -contains("sched"), -contains("carrier"))
+select(flights, one_of(c("dep_time", "dep_delay", "arr_time", "arr_delay")))
+
+#2. Co się stanie, gdy w wywołaniu <select()> kilkakrotnie wpiszesz nazwę tej samej zmiennej?
+select(flights, dep_time, dep_time, dep_time)
+select(flights, dep_time)
+
+#AD2. nic.
+
+#3. Do czego służy funkcja <one_of()>? Dlaczego może się okazać przydatna razem z tym wektorem?
+vars <- c("year", "month", "day", "dep_delay", "arr_delay", "inna_zmienna")
+select(flights, one_of(vars))
+
+#AD3. Porównuje nazwy zmiennych do wskazanego zbioru wartości tekstowych. Jeśli znalezione zmienne zostają wybrane, lecz funkcja nie zwraca błędu w przypadku, w którym któryś argument nie zostanie dopasowany do nazw kolumn.
+
+#4. Czy wyniki uruchomienia poniższego kodu Cię zaskoczyły? Jak funkcje pomocnicze radzą sobie domyślnie z wielkością liter? Jak można zmienić to domyślne zachowanie?
+select(flights, contains("TIME", ignore.case = F))
+
+#AD4. domyślnie funkcja nie zwraca uwagi na wielkość liter. Zmieniając argument ignore.case z PRAWDY na FAŁSZ zmieniamy to zachowanie.
+```
+
+Ćwiczenia ze strony 71
+```{r}
+#1. Obecnie wygodnie czyta się wartości zmienych dep_time i sched_dep_time, ale trudno jest użyć ich do obliczeń, ponieważ nie są one liczbami ciągłymi. Przekształć je do wygodniejszej postaci, wyznaczając liczbę minut, jaka upłynęła od północy.
+select(flights, dep_time, sched_dep_time) %>% 
+  transmute(dep_time_minutes = (dep_time %/% 100 * 60 + dep_time %% 100) %% 1440,
+         sched_dep_time_minutes = (sched_dep_time %/% 100 * 60 + sched_dep_time %% 100) %% 1440)
+
+#2. Porównaj air_time z (air_time - dep_time). Czego oczekujesz? Co widzisz? Jak to poprawić?
+select(flights, air_time, dep_time, arr_time) %>% 
+  transmute(dep_time_minutes = (dep_time %/% 100 * 60 + dep_time %% 100) %% 1440,
+            arr_time_minutes = (arr_time %/% 100 * 60 + arr_time %% 100) %% 1440,
+            air_time,
+            air_time_new = ifelse(arr_time_minutes > dep_time_minutes, arr_time_minutes - dep_time_minutes, 1440 - dep_time_minutes + arr_time_minutes))
+
+#AD2. Zależnośc nie jest dla mnie jasna. Podejrzewam, że różnice w ręcznie wyliczonym czasie trwania lotu to różnie czasu spowodowane wkraczeniem w inną strefę czasową (ale nie tylko, bo gdyby to była jedyna różnica, to wyniki różniłyby się tylko o wielkokrotności 60 minut) oraz innymi zmiennymi branymi pod uwagę podaczas wyliczania czasu trwania lotu jak np.: czas przejazdu autobusu zabierającego pasażerów lub czas na wystartowanie samolotu.
+
+#3. Porównaj dep_time, sched_dep_time i dep_delay. Jaka jest zależność między nimi?
+select(flights, contains("dep")) %>% 
+  mutate(sched_dep_time_minutes = (sched_dep_time %/% 100 * 60 + sched_dep_time %% 100) %% 1440,
+         dep_time_minutes = sched_dep_time_minutes + dep_delay,
+         dep_time_new = (dep_time_minutes %/% 60 * 100 + dep_time_minutes %% 60) %% 2400) %>% 
+  select(dep_time, dep_time_new) %>% 
+  filter((dep_time - dep_time_new != 0))
+#AD3. Jedyne wiersze, które się nie zgadzają, to oryginalnie zakodowana północ jako 2400, gdzie w sposobie ręcznym jest ona zakodowana jako 0000.
+
+#4. Znajdź dziesięć najbardziej opóźnionych lotów za pomocą funkcji rankingowej. Jak rozwiążesz zależności? Uważnie przeczytaj dokumejtację funkcji <min_rank()>
+rankme <- tibble(x = c(10, 5, 5, 1, 10, 15))
+
+rankme %>% mutate(min_rank = min_rank(x),
+       row_number = row_number(x),
+       dense_rank = dense_rank(x)) %>% 
+  arrange(min_rank, row_number, dense_rank)
+#AD4 patrzę jak działają różne (wymienione w książce) funkcje do nadawania rang
+
+mutate(flights, 
+       dep_delay_min_rank = min_rank(dep_delay),
+       dep_delay_row_number = row_number(dep_delay),
+       dep_delay_dense_rank = dense_rank(dep_delay)) %>% 
+  filter(dep_delay_min_rank <= 10,
+         dep_delay_row_number <= 10,
+         dep_delay_dense_rank <= 10) %>% 
+  select(dep_delay, dep_delay_min_rank, dep_delay_row_number, dep_delay_dense_rank) %>%
+  arrange(dep_delay)
+
+#5. Jaki jest wynik działania 1:3 + 1:10? Dlaczego?
+1:3 + 1:10
+#AD5. Jest to zabieg dodawnia wartości dwóch wektorów, przy czym R "wydłuża" wektor posiadający mniej wartości powtarzając go od nowa, aby wykonać wszystkie operacje. Schemat działania: 1+1 = 2; 2+2 =4; 3+3 = 6; 1+4 = 5; 2+5 = 7...
+
+#6. Jakie funkcje trygonometryczne są dostępne w R?
+?Trig
+
+#AD6. dostępne funkcje trygonometryczne to: cos(x), sin(x), tan(x); w których inputem jest kąt wyrażony w radianach. Funkcje cospi(x), sinpi(x) i tanpi(x) są równoznaczne z cos(x * pi), sin(x * pi) i tan(x * pi). Dostępne są także funkcje acos(x), asin(x), atan(x) oraz atan2(y, x), która wyznacza kąt pomiędzy osią x, a prostą przechodzącą przez punkty (0, 0) oraz (x, y).
+```
+
+Ćwiczenia ze strony 83
+```{r}
+#1. Wymyśl co najmniej pięć różnych sposobów na oszacowanie typowych cech opóźnień w grupie lotów. Rozważ następujące scenariusze:
+#Lot jest o 15 minut za wcześnie przez 50% czasu, i o 15  minut za późno przez 50% czasu.
+flights %>% 
+  group_by(flight) %>% 
+  summarise(liczebnosc = n(),
+            early_15 = mean(arr_delay == -15, na.rm = TRUE),
+            late_15 = mean(arr_delay == 15, na.rm = TRUE)) %>% 
+  filter(early_15 == .5, late_15 == .5)
+
+#Lot jest zawsze opóźniony o 10 minut.
+flights %>% 
+  group_by(flight) %>% 
+  summarise(liczebnosc = n(),
+            late_10 = mean(arr_delay == 10, na.rm = TRUE)) %>% 
+  filter(late_10 == 1)
+
+#Lot jest o 30 minut za wcześnie przez 50% czasu i jest opóźniony o 30 minut przez 50% czasu.
+flights %>% 
+  group_by(flight) %>% 
+  summarise(liczebnosc = n(),
+            early_30 = mean(arr_delay == -30, na.rm = TRUE),
+            late_30 = mean(arr_delay == 30, na.rm = TRUE)) %>% 
+  filter(early_30 == .5, late_30 == .5)
+
+#Przez 99% czasu lot jest zgodny z harmonogramem. Przez 1% czasu jest opóźniony o 2 godziny.
+flights %>% 
+  group_by(flight) %>% 
+  summarise(liczebnosc = n(),
+            on_time = mean(arr_delay == 0, na.rm = TRUE),
+            late_2h = mean(arr_delay == 120, na.rm = TRUE)) %>%
+  filter(on_time == .99, late_2h == .01)
+
+#Co jest ważniejsze: opóźnienie przylotu czy odlotu.
+#AD1. ważniejsze jest opóźnienie przylotu, ze względu na to, że wpływa na dalsze plany pasażerów (np. bycie spóźnionym na przesiadkę/ wymuszenie na innym środku transportu zaczekania powodując dalsze opóźnienia. Albo bycie spóźnionym na zaplanowane spotkania itd.). Opóźnienie wylotu można nadgonić w czasie jego trwania.
+
+#2. Wymyśl inny sposób, który pozwoli uzyskać taki sam wynik jak not_cancelled %>% count(dest) oraz not_cancelled %>% count(tailnum, wt = distance) (bez korzystania z funkcji count())
+not_cancelled <- flights %>% 
+  filter(!is.na(dep_delay), !is.na(arr_delay))
+
+df1 <- not_cancelled %>% count(dest)
+df2 <- not_cancelled %>% count(tailnum, wt = distance)
+
+my_df1 <- flights %>% 
+  group_by(dest) %>% 
+  filter(!is.na(dep_delay), !is.na(arr_delay)) %>% 
+  summarise(n = n())
+identical(df1, my_df1)
+
+my_df2 <- flights %>% 
+  group_by(tailnum) %>% 
+  filter(!is.na(dep_delay), !is.na(arr_delay)) %>% 
+  summarise(n = sum(distance))
+identical(df2, my_df2)
+
+#3. Nasza definicja anulowanych lotów (is.na(dep_delay) | is.na(arr_delay)) nie jest optymalna. Dlaczego? Która kolumna jest najważniejsza?
+
+#AD3. Jeśli lot dotarł na miejsce (niebrakująca wartość arr_delay), to znaczy, że samolot musiał wystartować. Jednak w odwrotnej sytuacji może być tak, że samolot wystartował (niebrakująca wartość dep_delay), lecz z powodu pogody bądź innych wylądował na innym lotnisku niż było zaplanowane (wtedy spodziewam się brakującej wartości arr_delay). Idąc tym tropem uważam, że kolumna arr_delay jest ważniejsza i aby wyznaczyć anulowane loty wystarczy not_cancelled <- filter(!is.na(arr_delay)).
+
+#4. Przyjrzyj się liczbie lotów anulowanych w poszczególnych dniach. Czy dostrzegasz wzorzec? Czy proporcja anulowanych lotów jest powiązana ze średnim opóźnieniem?
+cancelled_pattern <- flights %>% 
+  group_by(year, month, day) %>% 
+  summarise(total = n(),
+            cancelled = sum(is.na(arr_delay)),
+            cancelled_perc = mean(is.na(arr_delay)),
+            avg_dep_delay = mean(dep_delay, na.rm = T),
+            avg_arr_delay = mean(arr_delay, na.rm = T)) %>% 
+  ungroup()
+
+cancelled_pattern %>% ggplot(aes(x = total, y = cancelled)) +
+  geom_point(alpha = 1/3) +
+  geom_smooth(se = FALSE)
+
+cancelled_pattern %>% ggplot(aes(x = avg_dep_delay, y = cancelled_perc)) +
+  geom_point(alpha = 1/3) + 
+  geom_smooth(se = FALSE)
+
+cancelled_pattern %>% ggplot(aes(x = avg_arr_delay, y = cancelled_perc)) +
+  geom_point(alpha = 1/3) + 
+  geom_smooth(se = FALSE)
+
+#AD4. Najpierw sprawdzam, czy wzraz ze wzrostem liczby lotów danego dnia zwiększa się liczba anulowanych lotów. Można zaobserwować, że im większa liczba lotów danego dnia, tym punkty na wykresie są bardziej rozproszone, lecz nie uważam, żeby była tam jakaś zależność. Następnie sprawdzam odsetek anulowanych danego dnia lotów względem średniego opóźnienia odlotu i przylotu (osobno). Tutaj widzimy, że wraz ze wzrostem opóźnienia, odsetek lotów anulowanych wzrasta. Może to być spowodowane np. warunkami atmosferycznymi danego dnia (loty nieanulowane mogą być opóźnione ze względu na nie), bądź przeciążeniem lotniska. 
+
+#5. Która linia lotnicza ma największe opóźnienia? Wyzwanie: czy możesz rozwikłać efekt złego lotniska oraz złych linii lotniczych? Dlaczego tak lub dlaczego nie? (Wskazówka: pomyśl o flights %>% group_by(carrier, dest) %>% summarise(n())).
+flights %>% 
+  group_by(carrier) %>% 
+  summarise(avg_arr_delay = mean(arr_delay, na.rm = TRUE),
+            avg_dep_delay = mean(dep_delay, na.rm = TRUE),
+            avg_delay = (avg_arr_delay + avg_dep_delay)/2) %>% 
+  arrange(desc(avg_delay)) %>% 
+  left_join(airlines, by = "carrier") %>% 
+  select(carrier, name, everything())
+
+#Wyznaczam liczbę lotów i łącze opóźnienie jakie dana linia lotnicza miała na danej trasie
+flights %>% 
+  filter(!is.na(arr_delay)) %>% 
+  group_by(origin, dest, carrier) %>% 
+  summarise(carrier_arr_delay = sum(arr_delay),
+            carrier_flights = n()) %>% 
+#Wyznaczam jakie jest całkowie opóźnienie i liczba wszystkich lotów na danej trasie, niezależnie od linii lotniczej
+  group_by(origin, dest) %>% 
+  mutate(total_arr_delay = sum(carrier_arr_delay),
+            total_flights = sum(carrier_flights)) %>%
+#Wyznaczam średnie opóźnienie danej linii lotniczej na danej trasie, średnie opóźnienie pozostałych linii lotniczych na tej trasie i różnicę między tymi wartościami
+  ungroup() %>% 
+  mutate(other_carriers_avg_route_delay = (total_arr_delay - carrier_arr_delay) / (total_flights - carrier_flights),
+         carrier_avg_route_delay = carrier_arr_delay / carrier_flights,
+         diff_between_carriers = carrier_avg_route_delay - other_carriers_avg_route_delay) %>%
+#Usuwam rekordy, dla których jedna linia lotnicza obsługiwała jedną trasę
+  filter(is.finite(diff_between_carriers)) %>% 
+#Wyznaczam średnią różnicę między daną linią lotniczą a innymi liniami, sortuje malejąco po tej wartości, dodaję nazwę linii lotniczej
+  group_by(carrier) %>% 
+  summarise(avg_diff_between_carriers = mean(diff_between_carriers)) %>% 
+  arrange(desc(avg_diff_between_carriers)) %>% 
+  left_join(airlines, by = "carrier") %>% 
+  select(1, 3, 2)
+
+#6. Dla każdego samolotu oblicz liczbę lotów przed pierwszym opóźnieniem większym niż jedna godzina.
+flights %>% 
+  filter(!is.na(arr_delay)) %>% 
+  group_by(tailnum) %>% 
+  mutate(delay_lessthan_60 = !cumany(arr_delay > 60)) %>% 
+  select(tailnum, arr_delay, delay_lessthan_60) %>% 
+  summarise(n_flights = sum(delay_lessthan_60)) %>% 
+  arrange(desc(n_flights))
+
+#7. Do czego służy argument sort funkcji  count()? Kiedy można z niego skorzystać?
+?count
+
+#AD7. argument sort, gdy ustawiony na TRUE, posortuje wynik zliczania malejąco po liczbie wystąpień. Taki zapis może zastąpić <count() %>% arragnge(desc())> 
+```
+
+Ćwiczenia ze strony 85
+```{r}
+#1. Powróć do tabeli z przydatnymi funkcjami mutującymi  i filtrującymi. Opisz, jak zmieni się każda z nich, gdy dodasz do niej grupowanie.
+#AD1. Funkjce podsumuwujące: <mean(), median(), sum(), std()>,
+#przesunięcia: <lead(), lag()>,
+#rankingu: <min_rank()>, 
+#kulumatywne: <cumsum(), cummax(), cummean()> 
+#użyte wewnątrz funkji <mutate(), filter()> będą odnosiły się do poszczególnych grup sprecyzowanych w <group_by()>
+
+#AD1. Operatory logiczne: <, <=, >, >=, !=, ==,
+#Operatory arytmetyczne: +, -, /, *, %%, %/%
+#użyte wewnątrz funkji <mutate(), filter()> NIE będą odnosiły się do poszczególnych grup sprecyzowanych w <group_by()>, lecz do wszystkich obserwacji. 
+
+#2. Do którego samolotu (tailnum) należy rekord najgorszej punktualności?
+#Na podstawie całkowitej wielkości opóźnienia
+flights %>% 
+  filter(!is.na(arr_delay)) %>% 
+  group_by(tailnum) %>% 
+  summarise(total_arr_delay = sum(arr_delay),
+            n = n()) %>%
+  filter(n > 20) %>% 
+  arrange(desc(total_arr_delay)) %>% 
+  filter(min_rank(desc(total_arr_delay)) <= 5)
+
+#Na podstawie propocji lotów na czas
+flights %>% 
+  filter(!is.na(arr_delay)) %>% 
+  group_by(tailnum) %>% 
+  summarise(prop_on_time = mean(arr_delay <=0),
+            n = n()) %>% 
+  filter(n > 20) %>% 
+  arrange(prop_on_time) %>% 
+  filter(min_rank(prop_on_time) <= 5)
+
+#Na podstawie średniej wielkości opóźnienia
+flights %>% 
+  filter(!is.na(arr_delay)) %>% 
+  group_by(tailnum) %>% 
+  summarise(avg_arr_delay = mean(arr_delay),
+            n = n()) %>%
+  arrange(desc(avg_arr_delay)) %>% 
+  filter(min_rank(desc(avg_arr_delay)) <= 5)
+
+#3. O jakiej porze doby powinieneś latać, aby najskuteczniej unikać opóźnień?
+#Na podstawie proporcjęi lotów na czas
+flights %>% 
+  filter(!is.na(arr_delay)) %>% 
+  group_by(hour) %>% 
+  summarise(prop_on_time = mean(arr_delay <= 0)) %>% 
+  filter(min_rank(desc(prop_on_time)) <= 10)
+
+#Na podstawie średniego opóźnienia
+flights %>% 
+  filter(!is.na(arr_delay)) %>% 
+  group_by(hour) %>% 
+  summarise(avg_arr_delay = mean(arr_delay)) %>% 
+  filter(min_rank(avg_arr_delay) <= 10)
+
+#4. Oblicz całkowitą liczbę minut  opóźnień dla każdego miejsca docelowego. Dla każdego lotu oblicz proporcję całkowitego opóźnienia względem miejsca docelowego.
+flights %>% 
+  filter(!is.na(arr_delay)) %>% 
+  select(flight, dest, arr_delay) %>% 
+  group_by(dest) %>% 
+  mutate(total_dest_arr_delay = sum(arr_delay),
+         prop_dest_arr_delay = arr_delay/total_dest_arr_delay) %>% 
+  ungroup() %>% 
+  group_by(dest, flight) %>% 
+  arrange(dest)
+
+#5. Opóźnienia są zwykle czasowo skorelowane: nawet jeśli problem, który spowodował początkowe opóźnienie, zostanie rozwiązany, późniejsze loty zostaną opóźnione, aby umożliwić odlot wcześniejszych lotów. Za pomocą funkcji <lag()> można sprawdzić zależność opóźnienia lotu od opóźnienia lotu bezpośrednio go poprzedzającego. 
+lagged_flights <- flights %>% 
+  filter(!is.na(dep_time)) %>% 
+  group_by(origin, year, month, day) %>% 
+  arrange(origin, year, month, day, dep_time) %>% 
+  mutate(lag_depdelay = lag(dep_delay)) %>% 
+  filter(!is.na(lag_depdelay)) %>% 
+  select(origin, year, month, day, dep_time, dep_delay, lag_depdelay) %>% 
+  print()
+
+lagged_flights %>% 
+  ungroup() %>% 
+  group_by(lag_depdelay) %>% 
+  mutate(mean_depdelay = mean(dep_delay)) %>% 
+  ggplot(aes(x = lag_depdelay, y = mean_depdelay)) +
+  geom_point() +
+  scale_x_continuous(breaks = seq(0, 1500, by = 60)) +
+  theme(axis.text.x = element_text(angle = -45)) +
+  geom_smooth(se = FALSE)
+#AD5. Na wykresie można odczytać, że ze wzrostem opóźnienia poprzedniego lotu do ok. 3h średnie opźnienie bieżącego lotu rośnie względnie liniowo. Po tym czasie punkty na wykresie stają się coraz bardziej rozproszone, lecz można przypuszczać, że wraz ze wzrostem opóźnienia poprzedniego lotu ponad 6-7h, średnie opóźnienie bieżącego lotu maleje. 
+
+#6. Przyjrzyj się wszystkim miejscom docelowym. Czy możesz znaleźć loty, które są podejrzanie szybkie? (Czyli loty, które reprezentują potencjalny błąd w danych wejściowych). Oblicz czas przebywania w powietrzu podczas każdego lotu względem najkrótszego lotu do tego miejsca docelowego. Które loty były najbardziej opóźnione w powietrzu?
+#Bazując na wartościach średnich
+standarised_flights <- flights %>% 
+  filter(!is.na(air_time)) %>% 
+  group_by(origin, dest) %>% 
+  mutate(standarised_airtime = (air_time - mean(air_time))/(sd(air_time) +1),
+         min_airtime = min(air_time),
+         mean_airtime = mean(air_time)) %>% 
+  select(origin, dest, standarised_airtime, mean_airtime, air_time, min_airtime) %>% 
+  ungroup() %>% 
+  arrange(standarised_airtime) %>% 
+  print()
+
+standarised_flights %>% 
+  ggplot(aes(x = standarised_airtime)) +
+  geom_density()
+
+fastest1 <- standarised_flights %>% 
+  head(25) %>% 
+  left_join(flights, by = c("origin", "dest", "air_time"))
+
+#Bazując na miarach pozycyjnych
+standarised_flights2 <- flights %>% 
+  filter(!is.na(air_time)) %>% 
+  group_by(origin, dest) %>% 
+  mutate(standarised_airtime = (air_time - median(air_time))/(IQR(air_time)),
+         median_airtime = median(air_time),
+         min_airtime = min(air_time)) %>% 
+  select(origin, dest, standarised_airtime, median_airtime, air_time, min_airtime) %>% 
+  ungroup() %>% 
+  arrange(standarised_airtime) %>% 
+  print()
+
+standarised_flights2 %>% 
+  ggplot(aes(x = standarised_airtime)) +
+  geom_density()
+
+fastest2 <- standarised_flights2 %>% 
+  head(25) %>% 
+  left_join(flights, by = c("origin", "dest", "air_time"))
+
+
+#7. Znajdź wszystkie kierunki, do których lata co najmniej dwóch przewoźników. Użyj tych informacji, aby sporządzić ranking przewoźników.
+flights %>% 
+  group_by(dest) %>% 
+  mutate(n_carrier = n_distinct(carrier)) %>% 
+  filter(n_carrier > 1) %>% 
+  ungroup() %>% 
+  group_by(carrier) %>% 
+  summarise(n_dest = n_distinct(dest)) %>% 
+  arrange(desc(n_dest))
+```
+
