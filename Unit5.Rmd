@@ -1,0 +1,104 @@
+W tym pliku rozwiązywane są ćwiczenia zamieszczone w piątym rozdziale książki H. Wickhama i G. Grolemunda pt. "Język R; kompletny zestaw narzrędzi dla analityków danych"
+
+Ćwiczenia ze strony 99
+```{r}
+#1. Przeanalizuj rozkład każdej zmiennej x, y i z w zbiorze danych diamonds. Czego się dowiedziałeś? Pomyśl o diamencie i zastanów się, jak mógłbyś zdecydować, który wymiał jest długością, szerokością i głębokością.
+library(tidyverse)
+
+diamonds %>% 
+  select(x, y, z) %>% 
+  summary()
+
+diamonds %>% 
+  ggplot(aes(x = x)) +
+  geom_histogram(binwidth = .01)
+
+diamonds %>% 
+  ggplot(aes(x = y)) +
+  geom_histogram(binwidth = .01)
+
+diamonds %>% 
+  ggplot(aes(x = z)) +
+  geom_histogram(binwidth = .01)
+
+#AD1. Histogramy wydają się być prawostronnie asymetryczne (dłuższy prawy "ogon") oraz multimodalne (wiele "pików"). Występują obserwacje odstające, które mogą wskazywać na błąd wprowadzenia danych. 
+diamonds %>% 
+  select(x, y, z) %>% 
+  filter(quantile(x, .0005) >= x | 
+           quantile(x, .99995) <= x |
+           quantile(y, .00005) >= y |
+           quantile(y, .99995) <= y |
+           quantile(z, .00005) >= z |
+           quantile(z, .99995) <= z)
+
+diamonds %>% 
+  ggplot(aes(x = x, y = y, color = !(quantile(x, .00005) >= x | 
+           quantile(x, .99995) <= x |
+           quantile(y, .00005) >= y |
+           quantile(y, .99995) <= y))) +
+  geom_jitter() +
+  theme(legend.position = "none")
+
+diamonds %>% 
+  ggplot(aes(x = x, y = z, color = !(quantile(x, .00005) >= x | 
+           quantile(x, .99995) <= x |
+           quantile(z, .00005) >= z |
+           quantile(z, .99995) <= z))) +
+  geom_jitter() +
+  theme(legend.position = "none")
+
+diamonds %>% 
+  ggplot(aes(x = z, y = y, color = !(quantile(z, .00005) >= z | 
+           quantile(z, .99995) <= z |
+           quantile(y, .00005) >= y |
+           quantile(y, .99995) <= y))) +
+  geom_jitter() +
+  theme(legend.position = "none")
+
+#AD1. W pomocy do zbioru danych opisano zmienne:
+#x - długośc w mm
+#y - szerokość w mm
+#z - głębokośc w mm.
+#Jeśli sam miałbym zgadywać, wtedy opierałbym się na wartościach rozstępu międzyćwiartkowego (pozbywając się wartości odstających). Zauważam, że zmienne x i y przyjmują bardzo podobne wartości, a zmienna z wartości mniejsze. Zgadywałbym, że długość i szerokość odnoszą się do wielkości korony, która kształt ma zazwyczaj zaokrąglony, dlatego obie zmienne przyjmują podobne wartości. Co zostawia zmienną z przyjmującą wartości od podstawy do tafli diamentu. 
+
+#2. Zbadaj rozkład zmiennej price. Czy zayważyłęś coś niezwykłego lub zaskakującego? (Wskazówka: pomyśl o binwidth i upewnij się, że wypróbowałeś wiele wartości tego argumentu).
+diamonds %>% 
+  select(price) %>% 
+  summary()
+
+for(i in c(1000, 500, 250, 100, 50, 25, 10)){
+  print(ggplot(diamonds, aes(x = price)) +
+          geom_histogram(binwidth = i))
+}
+
+#AD2. Rozkład zmiennej jest ponownie prawostronnie asymetryczny. Przy zmianie argumentu binwidth na mniejszy zauważyć można na wykresie, że w zbiorze danych nie ma obserwacji o diamentach, których wartość wynosi ok 1,500$.
+
+#3. Ile jest diamentów .99-karatowych? Ile jest 1-karatowych? Jak myślisz, z czego wynika różnica?
+diamonds %>% 
+  filter(carat == .99 | carat == 1) %>% 
+  group_by(carat) %>% 
+  summarise(n = n())
+
+#AD3. W zbiorze danych znajdują się 23 obserwacje diamentów o wadze .99 karatu oraz 1558 obserwacji o wadze 1 pełnego karatu. Zgaduję, że waga, która wyrażona jest liczbą całkowitą jest więcej warta, dlatego popularne jest cięcie diamentów właśnie w taki sposób. 
+
+#4. Porównaj wynik działania funkcji <coord_cartesian()> z <xlim()> lub <ylim()> podczas powiększania histogramu. Co się stanie, jeśli nie skonfigurujesz argumentu binwidth? Co się stanie, jeśli spróbyjesz powiększyć wykres tak, aby widoczna była tylko połowa słupków?
+ggplot(diamonds, aes(x = carat)) +
+  geom_histogram(binwidth = .5)
+
+ggplot(diamonds, aes(x = carat)) +
+  geom_histogram(binwidth = .5) +
+  coord_cartesian(xlim = c(0, 5),
+                  ylim = c(0, 30000))
+
+ggplot(diamonds, aes(x = carat)) +
+  geom_histogram() +
+  coord_cartesian(xlim = c(0,5),
+                  ylim = c(0, 30000))
+
+ggplot(diamonds, aes(x = carat)) +
+  geom_histogram(binwidth = .5) +
+  xlim(0, 5) +
+  ylim(0, 30000)
+
+#AD4. Funkcja >coord_cartesian()> ogranicza wykres do wskazanego wycinka według podanych współrzędnych, przy czym wykres tworzony jest w całości (jedynie wyświetlana jest jego część). W przypadku funkcji <xlim()> i <ylim()>, te ograniczają wykres według współrzędnych, po czym jest on tworzony na ograniczonych osiach. Mogą wystąpić pominięcia pewnych obserwacji stosując te dwie funkcje. 
+```
